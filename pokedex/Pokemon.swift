@@ -9,7 +9,7 @@
 import Foundation
 import SwiftyJSON
 
-class Pokemon {
+class Pokemon: NSObject {
     
     let number: Int!
     let name: String!

@@ -9,7 +9,7 @@
 import Foundation
 import SwiftyJSON
 
-class Skill {
+class Skill: NSObject  {
     
     let name: String!
     let type: String!

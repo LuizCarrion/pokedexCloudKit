@@ -9,7 +9,7 @@
 import Foundation
 import SwiftyJSON
 
-class Status {
+class Status: NSObject  {
     let health: Int!
     let attack: Int!
     let defense: Int!
