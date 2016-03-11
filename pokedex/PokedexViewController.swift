@@ -7,25 +7,30 @@
 //
 
 import UIKit
+import CloudKit
 
-class PokedexViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class PokedexViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, AsyncUpdateProtocol {
 
     @IBOutlet weak var pokemonTableView: UITableView!
     
-    var arrayPokemon = Array<Pokemon>()
-    var selectedPokemon: Pokemon!
+    var selectedPokemon: CKRecord!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         let nib = UINib(nibName: "PokeCell", bundle: nil)
         pokemonTableView.registerNib(nib, forCellReuseIdentifier: "PokeCell")
         
-        let cloud = CloudManager()
+        CloudManager.sharedInstance().asyncUpdate = self
         
-        
-        arrayPokemon = cloud.loadFromJSON()
-        cloud.checkDatabase()
 
+    }
+    
+    override func viewWillAppear(animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if CloudManager.sharedInstance().pokemonListCount() == 0 {
+            view.lock()
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -35,28 +40,43 @@ class PokedexViewController: UIViewController, UITableViewDataSource, UITableVie
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell:PokeTableViewCell = tableView.dequeueReusableCellWithIdentifier("PokeCell") as! PokeTableViewCell
-        let pokemon = arrayPokemon[indexPath.row]
-        
-        cell.pokeLevelLabel.text = "Lvl: \(pokemon.level)"
-        cell.pokeNameLabel.text = pokemon.name
-        cell.pokeTypeLabel.text = "\(pokemon.type.type1)      \(pokemon.type.type2!)"
+        let pokemon = CloudManager.sharedInstance().pokemonAtIndex(indexPath.row)
+        let type = pokemon["Type"] as! [String]
+        cell.pokeLevelLabel.text = "Lvl: \(pokemon["Level"] as! Int)"
+        cell.pokeNameLabel.text = pokemon["Name"] as? String
+        cell.pokeTypeLabel.text = "\(type[0])    \(type[1])"
         cell.activityIndicator.startAnimating()
         cell.activityIndicator.hidden = false
         cell.activityIndicator.hidesWhenStopped = true
         
         
+        var bool = true
+        for obj in CloudManager.sharedInstance().favorites {
+            if ((obj["Pokemon"] as! String) == (pokemon["Name"] as! String)){
+                bool = false
+            }
+        }
+        
+        cell.favoriteIcon.hidden = bool
+        
+        if let data = NSData(contentsOfURL: (pokemon["Icon"] as! CKAsset).fileURL){
+            cell.pokeIcon.image = UIImage(data: data)
+            cell.activityIndicator.stopAnimating()
+        }
+        
+       
         return cell
         
         
     }
     
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        selectedPokemon = arrayPokemon[indexPath.row]
+        selectedPokemon = CloudManager.sharedInstance().pokemonAtIndex(indexPath.row)
         self.performSegueWithIdentifier("pokemonSegue", sender: nil)
     }
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return arrayPokemon.count
+        return CloudManager.sharedInstance().pokemonListCount()
     }
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
@@ -65,6 +85,12 @@ class PokedexViewController: UIViewController, UITableViewDataSource, UITableVie
             
             vc.pokemon = self.selectedPokemon
         }
+    }
+    
+    func asyncUpdate() {
+        view.unlock()
+        //print(CloudManager.sharedInstance().pokemonAtIndex(0)["Skills"])
+        pokemonTableView.reloadData()
     }
     
 

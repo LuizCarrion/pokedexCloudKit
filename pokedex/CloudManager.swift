@@ -12,12 +12,17 @@ import SwiftyJSON
 let RECORD_TYPE_POKEMON = "Pokemon"
 let RECORD_TYPE_STATUS = "Status"
 let RECORD_TYPE_SKILLS = "Skills"
+let RECORD_TYPE_FAVORITE = "Favorite"
 public class CloudManager: NSObject {
     
     private let fileName = "pokemons"
     private let privateDb: CKDatabase = CKContainer.defaultContainer().privateCloudDatabase
     private let publicDb: CKDatabase = CKContainer.defaultContainer().publicCloudDatabase
     private var pokemonList = Array<CKRecord>()
+    var favorites = Array<CKRecord>()
+    var asyncUpdate: AsyncUpdateProtocol?
+    var arrayPokemon = Array<Pokemon>()
+    
     
     private init(singleton: Bool) {
         super.init()
@@ -38,18 +43,24 @@ public class CloudManager: NSObject {
         return Static.instance!
     }
     
-    func populateCloudFromJSON() {
+    private func populateCloudFromJSON() {
         let array = loadFromJSON()
+        arrayPokemon = array
         
-        for obj in array{
-            let pokemonRecord = CKRecord(recordType: RECORD_TYPE_POKEMON)
+        for var i in 0...array.count-1{
+            
+            let obj = array[i]
+            
+            let pokemonID = CKRecordID(recordName: obj.name)
+            let pokemonRecord = CKRecord(recordType: RECORD_TYPE_POKEMON, recordID: pokemonID)
             
             pokemonRecord["Name"] = obj.name
             pokemonRecord["Level"] = obj.level
             pokemonRecord["Number"] = obj.number
             pokemonRecord["Type"] = [obj.type.type1, obj.type.type2]
             
-            let statusRecord = CKRecord(recordType: RECORD_TYPE_STATUS)
+            let statusID = CKRecordID(recordName: "\(obj.name): Stats")
+            let statusRecord = CKRecord(recordType: RECORD_TYPE_STATUS, recordID: statusID)
             
             statusRecord["Health"] = obj.status.health
             statusRecord["Attack"] = obj.status.attack
@@ -75,7 +86,8 @@ public class CloudManager: NSObject {
             
             for skill in obj.skills {
                 
-                let skillRecord = CKRecord(recordType: RECORD_TYPE_SKILLS)
+                let skillID = CKRecordID(recordName: "\(obj.name): \(skill.name)")
+                let skillRecord = CKRecord(recordType: RECORD_TYPE_SKILLS, recordID: skillID)
                 
                 
                 skillRecord["Name"] = skill.name
@@ -108,13 +120,69 @@ public class CloudManager: NSObject {
                 if let e = error{
                     print(e.debugDescription)
                 }else{
-                    print("success")
+                    if(i == array.count-1){
+                        self.uploadImages(obj, pokeRecord: pokemonRecord, last: true, index: i)
+                    }else{
+                        self.uploadImages(obj, pokeRecord: pokemonRecord, last: false, index: i)
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    
+    
+    private func uploadImages(pokemon: Pokemon, pokeRecord: CKRecord, last: Bool, index: Int){
+        
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
+            let url = NSURL(string: pokemon.icon)!
+            if let icon = UIImage(data: NSData(contentsOfURL: url)!){
+                let imageUrl = NSURL(string: pokemon.image)!
+                if let image = UIImage(data: NSData(contentsOfURL: imageUrl)!){
+                    dispatch_async(dispatch_get_main_queue()) {
+                        
+                        
+                        
+                        pokeRecord["Icon"] = CKAsset(fileURL: self.saveImageToFile(icon, index: index+100))
+                        pokeRecord["Image"] = CKAsset(fileURL: self.saveImageToFile(image, index: index))
+                        
+                        
+                        self.publicDb.saveRecord(pokeRecord)  { savedUser, error in
+                            if let e = error{
+                                print("\(e.localizedDescription)")
+                            }else{
+                                print("\(pokemon.name) updated icon/image")
+                                
+                                if(last){
+                                    self.checkDatabase()
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
     
-    private func checkDatabase(){
+    private func saveImageToFile(image: UIImage, index: Int) -> NSURL{
+        let dirPaths = NSSearchPathForDirectoriesInDomains(
+            .DocumentDirectory, .UserDomainMask, true)
+        
+        let docsDir: AnyObject = dirPaths[0]
+        
+        let filePath =
+        docsDir.stringByAppendingPathComponent("image\(index).png")
+        
+        UIImageJPEGRepresentation(image, 0.5)!.writeToFile(filePath,
+            atomically: true)
+        
+        return NSURL.fileURLWithPath(filePath)
+    }
+
+    
+    
+    func checkDatabase(){
         let query = CKQuery(recordType: RECORD_TYPE_POKEMON, predicate: NSPredicate(value: true))
         
         publicDb.performQuery(query, inZoneWithID: nil, completionHandler: { (results, error) -> Void in
@@ -126,11 +194,12 @@ public class CloudManager: NSObject {
                 self.populateCloudFromJSON()
             }else {
                 self.pokemonList = results!
+                self.fetchFavorites()
             }
         })
     }
     
-    func loadFromJSON() -> Array<Pokemon> {
+    private func loadFromJSON() -> Array<Pokemon> {
         let path = NSBundle.mainBundle().pathForResource(fileName, ofType: "json")
         var jsonData: NSData!
         do{
@@ -149,6 +218,32 @@ public class CloudManager: NSObject {
         return arrayPokemon
     }
     
+    private func fetchFavorites(){
+        let query = CKQuery(recordType: RECORD_TYPE_FAVORITE, predicate: NSPredicate(value: true))
+        
+        privateDb.performQuery(query, inZoneWithID: nil, completionHandler: { (results, error) -> Void in
+            if error != nil {
+                print(error)
+            }
+            if let records = results{
+                self.favorites = records
+                dispatch_async(dispatch_get_main_queue(), {
+                    self.asyncUpdate?.asyncUpdate()
+                })
+
+            }
+        })
+
+    }
+    
+    func saveFavorite(name: String){
+        let record = CKRecord(recordType: RECORD_TYPE_FAVORITE, recordID: CKRecordID(recordName: name+": Favorite"))
+        record["Pokemon"] = name
+        privateDb.saveRecord(record) { (record, error) -> Void in
+            self.fetchFavorites()
+        }
+    }
+    
     func pokemonListCount () -> Int {
         return pokemonList.count
     }
@@ -156,7 +251,6 @@ public class CloudManager: NSObject {
     func pokemonAtIndex(index: Int) -> CKRecord{
         
         return pokemonList[index]
-        
     }
     
     

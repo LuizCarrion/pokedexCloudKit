@@ -12,7 +12,7 @@
             <rect key="frame" x="0.0" y="0.0" width="560" height="80"/>
             <autoresizingMask key="autoresizingMask"/>
             <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="U88-Gz-u6o" id="obg-xD-C0c">
-                <rect key="frame" x="0.0" y="0.0" width="560" height="79.5"/>
+                <rect key="frame" x="0.0" y="0.0" width="560" height="80"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="rm4-uk-OSX">
@@ -59,12 +59,21 @@
                         <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                         <nil key="highlightedColor"/>
                     </label>
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="pokeball" translatesAutoresizingMaskIntoConstraints="NO" id="2hJ-ed-EcB">
+                        <rect key="frame" x="138" y="6" width="25" height="25"/>
+                        <constraints>
+                            <constraint firstAttribute="width" constant="25" id="Dxz-jC-Kz3"/>
+                            <constraint firstAttribute="height" constant="25" id="gRE-fr-EFT"/>
+                        </constraints>
+                    </imageView>
                 </subviews>
                 <constraints>
+                    <constraint firstItem="2hJ-ed-EcB" firstAttribute="top" secondItem="obg-xD-C0c" secondAttribute="topMargin" constant="-2" id="1G5-3d-9kC"/>
                     <constraint firstItem="bcT-q9-W4H" firstAttribute="top" secondItem="obg-xD-C0c" secondAttribute="topMargin" id="4Q5-UV-gqk"/>
                     <constraint firstAttribute="bottomMargin" secondItem="6Fh-Vd-qAS" secondAttribute="bottom" constant="-0.5" id="9eu-aL-zoQ"/>
                     <constraint firstAttribute="bottomMargin" secondItem="gr5-YK-o6J" secondAttribute="bottom" constant="22" id="CVy-oX-gx6"/>
                     <constraint firstItem="gr5-YK-o6J" firstAttribute="leading" secondItem="obg-xD-C0c" secondAttribute="leadingMargin" constant="22" id="HUz-fP-wDo"/>
+                    <constraint firstItem="2hJ-ed-EcB" firstAttribute="leading" secondItem="OHB-gd-Who" secondAttribute="trailing" constant="8" id="LfA-HZ-buy"/>
                     <constraint firstItem="bcT-q9-W4H" firstAttribute="leading" secondItem="OHB-gd-Who" secondAttribute="trailing" constant="371" id="NSw-9y-RBW"/>
                     <constraint firstItem="OHB-gd-Who" firstAttribute="top" secondItem="obg-xD-C0c" secondAttribute="topMargin" id="RYh-dl-Gqa"/>
                     <constraint firstItem="6Fh-Vd-qAS" firstAttribute="top" secondItem="OHB-gd-Who" secondAttribute="bottom" constant="22" id="T2V-OK-cs1"/>
@@ -84,6 +93,7 @@
             </tableViewCellContentView>
             <connections>
                 <outlet property="activityIndicator" destination="gr5-YK-o6J" id="2dz-kX-aV2"/>
+                <outlet property="favoriteIcon" destination="2hJ-ed-EcB" id="bRH-gC-c29"/>
                 <outlet property="pokeIcon" destination="rm4-uk-OSX" id="gHh-pL-fwM"/>
                 <outlet property="pokeLevelLabel" destination="bcT-q9-W4H" id="2vs-dC-3zs"/>
                 <outlet property="pokeNameLabel" destination="OHB-gd-Who" id="v7i-fS-npR"/>
@@ -92,4 +102,7 @@
             <point key="canvasLocation" x="397" y="502"/>
         </tableViewCell>
     </objects>
+    <resources>
+        <image name="pokeball" width="12" height="12"/>
+    </resources>
 </document>

@@ -15,5 +15,6 @@ class PokeTableViewCell: UITableViewCell {
     @IBOutlet weak var pokeLevelLabel: UILabel!
     @IBOutlet weak var pokeIcon: UIImageView!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak var favoriteIcon: UIImageView!
 
 }

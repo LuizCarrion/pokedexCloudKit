@@ -7,8 +7,9 @@
 //
 
 import UIKit
+import CloudKit
 
-class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, AsyncUpdateProtocol {
     
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var levelLabel: UILabel!
@@ -25,10 +26,16 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
     @IBOutlet weak var abilitiesTableView: UITableView!
     @IBOutlet weak var activityMonitor: UIActivityIndicatorView!
     
-    var pokemon: Pokemon!
+    var pokemon: CKRecord!
+    var skills: [CKReference]!
+    let publicDb = CKContainer.defaultContainer().publicCloudDatabase
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        let aSelector: Selector = "favoriteTapped:"
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Favorite", style: .Plain, target: self, action: aSelector)
+        
         
         let nib = UINib(nibName: "AbilityCell", bundle: nil)
         abilitiesTableView.registerNib(nib, forCellReuseIdentifier: "abilityCell")
@@ -37,51 +44,114 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
         self.activityMonitor.hidden = false
         self.activityMonitor.hidesWhenStopped = true
         
-        nameLabel.text = pokemon.name
-        levelLabel.text = "Lvl: \(pokemon.level)"
-        typesLabel.text = "\(pokemon.type.type1)     \(pokemon.type.type2!)"
-        healthLabel.text = "\(pokemon.status.health)"
-        attackLabel.text = "\(pokemon.status.attack)"
-        defenseLabel.text = "\(pokemon.status.defense)"
-        spAtkLabel.text = "\(pokemon.status.spAttack)"
-        spDefLabel.text = "\(pokemon.status.spDefense)"
-        speedLabel.text = "\(pokemon.status.speed)"
-        numberLabel.text = "# \(pokemon.number)"
+        let type = pokemon["Type"] as! [String]
+        
+        nameLabel.text = pokemon["Name"] as? String
+        levelLabel.text = "Lvl: \(pokemon["Level"] as! Int)"
+        typesLabel.text = "\(type[0])    \(type[1])"
+        numberLabel.text = "# \(pokemon["Number"] as! Int)"
+        self.healthLabel.hidden = true
+        self.attackLabel.hidden = true
+        self.defenseLabel.hidden = true
+        self.spAtkLabel.hidden = true
+        self.spDefLabel.hidden = true
+        self.speedLabel.hidden = true
+        
+        
+        skills = pokemon["Skills"] as! [CKReference]
+        
+        
+        publicDb.fetchRecordWithID( (pokemon["Status"] as! CKReference).recordID) { (results, error) -> Void in
+            
+            if let stats = results{
+                self.healthLabel.text = "\(stats["Health"] as! Int)"
+                self.attackLabel.text = "\(stats["Attack"] as! Int)"
+                self.defenseLabel.text = "\(stats["Defense"] as! Int)"
+                self.spAtkLabel.text = "\(stats["SpAttack"] as! Int)"
+                self.spDefLabel.text = "\(stats["SpDefense"] as! Int)"
+                self.speedLabel.text = "\(stats["Speed"] as! Int)"
+                
+                self.healthLabel.hidden = false
+                self.attackLabel.hidden = false
+                self.defenseLabel.hidden = false
+                self.spAtkLabel.hidden = false
+                self.spDefLabel.hidden = false
+                self.speedLabel.hidden = false
+                
+                
+                dispatch_async(dispatch_get_main_queue(), {
+                    self.abilitiesTableView.reloadData()
+                    self.reloadInputViews()
+                })
+
+            }
+        }
+        
+        if let data = NSData(contentsOfURL: (pokemon["Image"] as! CKAsset).fileURL){
+            pokemonImageView.image = UIImage(data: data)
+            activityMonitor.stopAnimating()
+        }
         
         
         
     }
     
+    
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell:AbilityTableViewCell = abilitiesTableView.dequeueReusableCellWithIdentifier("abilityCell") as! AbilityTableViewCell
+//        
+//        cell.nameLabel.hidden = true
+//        cell.typeLabel.hidden = true
+//        cell.ppLabel.hidden = true
+//        cell.powerLabel.hidden = true
+//        cell.damageCategoryLabel.hidden = true
+//        cell.accuracyLabel.hidden = true
         
-        let skill = pokemon.skills[indexPath.row]
-        cell.nameLabel.text  = skill.name
-        cell.typeLabel.text = skill.type
-        cell.ppLabel.text = "PP: \(skill.powerPoint)/\(skill.powerPoint)"
-        cell.powerLabel.text = "Power: \(skill.power)"
-        cell.damageCategoryLabel.text = skill.damageCategory
-        cell.accuracyLabel.text = "\(skill.accuracy)"
+        
+        publicDb.fetchRecordWithID( (skills[indexPath.row]).recordID) { (results, error) -> Void in
+            
+            if let skill = results{
+                
+                cell.accuracyLabel.text = "\(skill["Accuracy"] as! Int)"
+                cell.nameLabel.text  = skill["Name"] as? String
+                cell.typeLabel.text = skill["Type"] as? String
+                cell.ppLabel.text = "PP: \(skill["PowerPoint"] as! Int)/\(skill["PowerPoint"] as! Int)"
+                cell.powerLabel.text = "Power: \(skill["Power"] as! Int)"
+                cell.damageCategoryLabel.text = skill["DamageCategory"] as? String
+                
+                
+//                cell.nameLabel.hidden = false
+//                cell.typeLabel.hidden = false
+//                cell.ppLabel.hidden = false
+//                cell.powerLabel.hidden = false
+//                cell.damageCategoryLabel.hidden = false
+//                cell.accuracyLabel.hidden = false
+                
+                dispatch_async(dispatch_get_main_queue(), {
+                    self.abilitiesTableView.reloadData()
+                })
+            }
+        }
+
         
         return cell
     }
     
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        
     }
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return pokemon.skills.count
+        return skills.count
     }
-    /*
-    // MARK: - Navigation
     
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-    // Get the new view controller using segue.destinationViewController.
-    // Pass the selected object to the new view controller.
+    func favoriteTapped(sender: UIButton){
+        CloudManager.sharedInstance().saveFavorite(pokemon["Name"] as! String)
     }
-    */
+    
+    
+    func asyncUpdate() {
+        self.reloadInputViews()
+    }
     
 }

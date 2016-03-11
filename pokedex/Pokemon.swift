@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftyJSON
+import CloudKit
 
 class Pokemon: NSObject {
     
