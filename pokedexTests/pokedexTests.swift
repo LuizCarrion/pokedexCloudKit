@@ -7,13 +7,14 @@
 //
 
 import XCTest
+import CloudKit
 @testable import pokedex
 
-class pokedexTests: XCTestCase {
+class pokedexTests: XCTestCase, AsyncUpdateProtocol{
     
     override func setUp() {
         super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        
     }
     
     override func tearDown() {
@@ -21,16 +22,32 @@ class pokedexTests: XCTestCase {
         super.tearDown()
     }
     
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+
+    func testJSON(){
+        let pokemonArray = CloudManager.sharedInstance().loadFromJSON()
+        
+        XCTAssertEqual(pokemonArray.count, 6)
+        XCTAssertEqual(pokemonArray[0].name, "Pikachu")
+        XCTAssertEqual(pokemonArray[1].status.attack, 253)
+        XCTAssertEqual(pokemonArray[2].skills[0].name, "Take Down")
     }
     
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        self.measureBlock {
-            // Put the code you want to measure the time of here.
-        }
+    func testCloud(){
+        CloudManager.sharedInstance().checkDatabase({
+            XCTAssertNotNil(CloudManager.sharedInstance().pokemonAtIndex(0))
+            XCTAssertTrue(CloudManager.sharedInstance().pokemonListCount() > 0)
+            
+            let record = CloudManager.sharedInstance().pokemonAtIndex(CloudManager.sharedInstance().pokemonListCount() - 1)
+            
+            let skills = record["Skills"] as! [CKRecord]
+            
+            XCTAssertNotEqual(skills.count, 0)
+            
+        })
+       
     }
     
+    func asyncUpdate() {
+        
+    }
 }

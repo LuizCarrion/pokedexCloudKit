@@ -27,7 +27,7 @@ public class CloudManager: NSObject {
     private init(singleton: Bool) {
         super.init()
         
-        checkDatabase()
+        checkDatabase ({})
     }
     
     class func sharedInstance() -> CloudManager {
@@ -155,7 +155,7 @@ public class CloudManager: NSObject {
                                 print("\(pokemon.name) updated icon/image")
                                 
                                 if(last){
-                                    self.checkDatabase()
+                                    self.checkDatabase({})
                                 }
                             }
                         }
@@ -182,7 +182,7 @@ public class CloudManager: NSObject {
 
     
     
-    func checkDatabase(){
+    func checkDatabase(completionHandler: Void -> Void ){
         let query = CKQuery(recordType: RECORD_TYPE_POKEMON, predicate: NSPredicate(value: true))
         
         publicDb.performQuery(query, inZoneWithID: nil, completionHandler: { (results, error) -> Void in
@@ -199,7 +199,7 @@ public class CloudManager: NSObject {
         })
     }
     
-    private func loadFromJSON() -> Array<Pokemon> {
+    func loadFromJSON() -> Array<Pokemon> {
         let path = NSBundle.mainBundle().pathForResource(fileName, ofType: "json")
         var jsonData: NSData!
         do{
@@ -237,11 +237,33 @@ public class CloudManager: NSObject {
     }
     
     func saveFavorite(name: String){
-        let record = CKRecord(recordType: RECORD_TYPE_FAVORITE, recordID: CKRecordID(recordName: name+": Favorite"))
-        record["Pokemon"] = name
-        privateDb.saveRecord(record) { (record, error) -> Void in
-            self.fetchFavorites()
+        var aux = false
+        for obj in favorites{
+            if ((obj["Pokemon"] as! String) == name){
+                aux = true
+            }
         }
+
+        if aux {
+            privateDb.deleteRecordWithID(CKRecordID(recordName: name+": Favorite"), completionHandler: { (record, error) -> Void in
+                if error != nil{
+                    print(error?.localizedDescription)
+                }else{
+                    dispatch_async(dispatch_get_main_queue(), {
+                        self.asyncUpdate?.asyncUpdate()
+                    })
+                }
+            })
+        }else{
+            let record = CKRecord(recordType: RECORD_TYPE_FAVORITE, recordID: CKRecordID(recordName: name+": Favorite"))
+            record["Pokemon"] = name
+            privateDb.saveRecord(record) { (record, error) -> Void in
+                self.fetchFavorites()
+            }
+
+        }
+        
+        
     }
     
     func pokemonListCount () -> Int {

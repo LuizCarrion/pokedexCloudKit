@@ -25,13 +25,25 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
     @IBOutlet weak var pokemonImageView: UIImageView!
     @IBOutlet weak var abilitiesTableView: UITableView!
     @IBOutlet weak var activityMonitor: UIActivityIndicatorView!
+    @IBOutlet weak var favoriteIcon: UIImageView!
+    var hideFavorite: Bool!
     
     var pokemon: CKRecord!
     var skills: [CKReference]!
     let publicDb = CKContainer.defaultContainer().publicCloudDatabase
     
+    lazy var refreshControl: UIRefreshControl = {
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: "handleRefresh:", forControlEvents: UIControlEvents.ValueChanged)
+        
+        return refreshControl
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        self.abilitiesTableView.addSubview(refreshControl)
+        
         
         let aSelector: Selector = "favoriteTapped:"
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Favorite", style: .Plain, target: self, action: aSelector)
@@ -43,6 +55,8 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
         self.activityMonitor.startAnimating()
         self.activityMonitor.hidden = false
         self.activityMonitor.hidesWhenStopped = true
+        favoriteIcon.hidden = hideFavorite
+
         
         let type = pokemon["Type"] as! [String]
         
@@ -64,24 +78,21 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
         publicDb.fetchRecordWithID( (pokemon["Status"] as! CKReference).recordID) { (results, error) -> Void in
             
             if let stats = results{
-                self.healthLabel.text = "\(stats["Health"] as! Int)"
-                self.attackLabel.text = "\(stats["Attack"] as! Int)"
-                self.defenseLabel.text = "\(stats["Defense"] as! Int)"
-                self.spAtkLabel.text = "\(stats["SpAttack"] as! Int)"
-                self.spDefLabel.text = "\(stats["SpDefense"] as! Int)"
-                self.speedLabel.text = "\(stats["Speed"] as! Int)"
-                
-                self.healthLabel.hidden = false
-                self.attackLabel.hidden = false
-                self.defenseLabel.hidden = false
-                self.spAtkLabel.hidden = false
-                self.spDefLabel.hidden = false
-                self.speedLabel.hidden = false
-                
                 
                 dispatch_async(dispatch_get_main_queue(), {
-                    self.abilitiesTableView.reloadData()
-                    self.reloadInputViews()
+                    self.healthLabel.text = "\(stats["Health"] as! Int)"
+                    self.attackLabel.text = "\(stats["Attack"] as! Int)"
+                    self.defenseLabel.text = "\(stats["Defense"] as! Int)"
+                    self.spAtkLabel.text = "\(stats["SpAttack"] as! Int)"
+                    self.spDefLabel.text = "\(stats["SpDefense"] as! Int)"
+                    self.speedLabel.text = "\(stats["Speed"] as! Int)"
+                    
+                    self.healthLabel.hidden = false
+                    self.attackLabel.hidden = false
+                    self.defenseLabel.hidden = false
+                    self.spAtkLabel.hidden = false
+                    self.spDefLabel.hidden = false
+                    self.speedLabel.hidden = false
                 })
 
             }
@@ -112,23 +123,13 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
             
             if let skill = results{
                 
-                cell.accuracyLabel.text = "\(skill["Accuracy"] as! Int)"
-                cell.nameLabel.text  = skill["Name"] as? String
-                cell.typeLabel.text = skill["Type"] as? String
-                cell.ppLabel.text = "PP: \(skill["PowerPoint"] as! Int)/\(skill["PowerPoint"] as! Int)"
-                cell.powerLabel.text = "Power: \(skill["Power"] as! Int)"
-                cell.damageCategoryLabel.text = skill["DamageCategory"] as? String
-                
-                
-//                cell.nameLabel.hidden = false
-//                cell.typeLabel.hidden = false
-//                cell.ppLabel.hidden = false
-//                cell.powerLabel.hidden = false
-//                cell.damageCategoryLabel.hidden = false
-//                cell.accuracyLabel.hidden = false
-                
                 dispatch_async(dispatch_get_main_queue(), {
-                    self.abilitiesTableView.reloadData()
+                    cell.accuracyLabel.text = "\(skill["Accuracy"] as! Int)"
+                    cell.nameLabel.text  = skill["Name"] as? String
+                    cell.typeLabel.text = skill["Type"] as? String
+                    cell.ppLabel.text = "PP: \(skill["PowerPoint"] as! Int)/\(skill["PowerPoint"] as! Int)"
+                    cell.powerLabel.text = "Power: \(skill["Power"] as! Int)"
+                    cell.damageCategoryLabel.text = skill["DamageCategory"] as? String
                 })
             }
         }
@@ -147,11 +148,22 @@ class PokemonDetailViewController: UIViewController, UITableViewDataSource, UITa
     
     func favoriteTapped(sender: UIButton){
         CloudManager.sharedInstance().saveFavorite(pokemon["Name"] as! String)
+        if(favoriteIcon.hidden){
+            favoriteIcon.hidden = false
+        }else {
+            favoriteIcon.hidden = true
+        }
     }
     
     
     func asyncUpdate() {
         self.reloadInputViews()
+    }
+    
+    
+    func handleRefresh(refreshControl: UIRefreshControl) {
+       abilitiesTableView.reloadData()
+        refreshControl.endRefreshing()
     }
     
 }

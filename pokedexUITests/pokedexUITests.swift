@@ -7,9 +7,12 @@
 //
 
 import XCTest
+@testable import pokedex
 
 class pokedexUITests: XCTestCase {
-        
+    
+    
+    
     override func setUp() {
         super.setUp()
         
@@ -28,9 +31,35 @@ class pokedexUITests: XCTestCase {
         super.tearDown()
     }
     
-    func testExample() {
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    func testPokemonTableView(){
+        
+        let app = XCUIApplication()
+        
+        sleep(10)
+        XCTAssertEqual(app.tables.cells.count, 6)
+        XCTAssert(app.staticTexts["Pikachu"].exists, "nameLabel")
+        XCTAssert(app.staticTexts["Bulbasaur"].exists, "nameLabel")
+        XCTAssert(app.staticTexts["Charizard"].exists, "nameLabel")
+        XCTAssert(app.staticTexts["Snorlax"].exists, "nameLabel")
+        XCTAssert(app.staticTexts["Primeape"].exists, "nameLabel")
+        XCTAssert(app.staticTexts["Squirtle"].exists, "nameLabel")
+        app.tables.cells.staticTexts["Charizard"].tap()
+        
+        XCTAssert(app.staticTexts["Lvl: 95"].exists, "levelLabel")
+        XCTAssert(app.staticTexts["Fire    Flying"].exists, "typeLabel")
+        
+        app.navigationBars["pokedex.PokemonDetailView"].buttons["Favorite"].tap()
+        app.navigationBars["pokedex.PokemonDetailView"].buttons["Back"].tap()
+        app.tables.cells.staticTexts["Pikachu"].tap()
+        
+        sleep(5)
+        XCTAssert(app.staticTexts["247"].exists, "healthLabel")
+        XCTAssert(app.staticTexts["Electric"].exists, "typeLabel")
+        XCTAssertEqual(app.tables.cells.count, 4)
+        app.tables.cells.staticTexts["Iron Tail"].tap()
+        
+        
+        
     }
     
 }

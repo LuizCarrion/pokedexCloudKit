@@ -15,12 +15,21 @@ class PokedexViewController: UIViewController, UITableViewDataSource, UITableVie
     
     var selectedPokemon: CKRecord!
     
+    lazy var refreshControl: UIRefreshControl = {
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: "handleRefresh:", forControlEvents: UIControlEvents.ValueChanged)
+        
+        return refreshControl
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         let nib = UINib(nibName: "PokeCell", bundle: nil)
         pokemonTableView.registerNib(nib, forCellReuseIdentifier: "PokeCell")
         
         CloudManager.sharedInstance().asyncUpdate = self
+        
+         self.pokemonTableView.addSubview(refreshControl)
         
 
     }
@@ -84,6 +93,17 @@ class PokedexViewController: UIViewController, UITableViewDataSource, UITableVie
             let vc: PokemonDetailViewController = segue.destinationViewController as! PokemonDetailViewController
             
             vc.pokemon = self.selectedPokemon
+            
+            var bool = true
+            for obj in CloudManager.sharedInstance().favorites {
+                if ((obj["Pokemon"] as! String) == (selectedPokemon["Name"] as! String)){
+                    bool = false
+                }
+            }
+            
+            vc.hideFavorite = bool
+
+            
         }
     }
     
@@ -91,6 +111,12 @@ class PokedexViewController: UIViewController, UITableViewDataSource, UITableVie
         view.unlock()
         //print(CloudManager.sharedInstance().pokemonAtIndex(0)["Skills"])
         pokemonTableView.reloadData()
+    }
+    
+    func handleRefresh(refreshControl: UIRefreshControl) {
+        CloudManager.sharedInstance().checkDatabase({})
+        pokemonTableView.reloadData()
+        refreshControl.endRefreshing()
     }
     
 
